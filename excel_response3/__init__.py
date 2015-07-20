@@ -6,7 +6,7 @@ try:
     from StringIO import StringIO
 except:
     from io import StringIO
-    
+
 from django.db.models.query import QuerySet, ValuesQuerySet
 from django.http import HttpResponse
 
@@ -26,7 +26,11 @@ class ExcelResponse(HttpResponse):
         if isinstance(self.data, ValuesQuerySet):
             self.data = list(self.data)
         elif isinstance(self.data, QuerySet):
-            self.data = list(self.data.values())
+            self.headers = [field.verbose_name.title() for field in self.data.model._meta.fields]
+            data_list = self.data.values_list()
+            self.data = [self.headers]
+            for row in data_list:
+                self.data.append(row)
         if hasattr(self.data, '__getitem__'):
             if isinstance(self.data[0], dict):
                 if self.headers is None:
@@ -70,11 +74,11 @@ class ExcelResponse(HttpResponse):
                     leading_zero_number_regex = re.compile(
                         '^[0]+[0-9,]*$'
                     )
-                    
+
                     comma_separated_number_regex = re.compile(
                         '^[0-9,\.\-][0-9,\.]*$')
                     dollar_regex = re.compile('^[0-9,\.$]+$')
-                    
+
                     if leading_zero_number_regex.match(value):
                         cell_style = xlwt.easyxf(num_format_str='0'*len(value))
                     elif comma_separated_number_regex.match(value) and value != '-':
